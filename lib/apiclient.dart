@@ -88,31 +88,71 @@ class ApiClient {
     }
   }
 
- Future<bool> uploadImages(
-    int patientRegistrationid, ScanDocumentMasterDto dto) async {
-  final prefs = await SharedPreferences.getInstance();
-  String basePath = (prefs.getString('DynamicEmrApiPath') ?? "");
-  String token = (prefs.getString('DynamicEmrLoginToken') ?? "");
-  var url =
-      Uri.parse(basePath + '/api/Scanner/${patientRegistrationid.toString()}');
-  print(url);
-  var jsonObj = json.encode(dto.toJson());
+  Future<bool> uploadImages(
+      int patientRegistrationid, ScanDocumentMasterDto dto) async {
+    final prefs = await SharedPreferences.getInstance();
+    String basePath = (prefs.getString('DynamicEmrApiPath') ?? "");
+    String token = (prefs.getString('DynamicEmrLoginToken') ?? "");
+    var url = Uri.parse(
+        basePath + '/api/Scanner/${patientRegistrationid.toString()}');
+    print(url);
+    var jsonObj = json.encode(dto.toJson());
 
-  var response = await http.post(url, body: jsonObj, headers: {
-    "Authorization": 'Bearer {$token}',
-    "Content-Type": "application/json"
-  });
+    var response = await http.post(url, body: jsonObj, headers: {
+      "Authorization": 'Bearer $token',
+      "Content-Type": "application/json"
+    });
 
-  if (response.statusCode == 200) {
-   // print(json.decode(response.body));
-    return true;
-  } else {
-    print(response.statusCode);
-    return false;
+    if (response.statusCode == 200) {
+      // print(json.decode(response.body));
+      return true;
+    } else {
+      print(response.statusCode);
+      return false;
+    }
   }
-}
 
+  Future<bool> checkLoginA() async {
+    final prefs = await SharedPreferences.getInstance();
+    String basePath = (prefs.getString('DynamicEmrApiPath') ?? "");
+    String token = (prefs.getString('DynamicEmrLoginToken') ?? "");
+    var url = Uri.parse('$basePath/api/Scanner/CheckLoginA');
+    print(url);
 
+    var response = await http.post(url, body: null, headers: {
+      "Authorization": 'Bearer $token',
+      "Content-Type": "application/json"
+    });
+
+    if (response.statusCode == 200) {
+      print(response);
+      return true;
+    } else {
+      print(response);
+      return false;
+    }
+  }
+
+  Future<bool> checkLoginB() async {
+    final prefs = await SharedPreferences.getInstance();
+    String basePath = (prefs.getString('DynamicEmrApiPath') ?? "");
+    String token = (prefs.getString('DynamicEmrLoginToken') ?? "");
+    var url = Uri.parse(basePath + '/api/Scanner/CheckLoginB');
+    print(url);
+
+    var response = await http.post(url, body: null, headers: {
+      "Authorization": 'Bearer $token',
+      "Content-Type": "application/json"
+    });
+
+    if (response.statusCode == 200) {
+      print(response);
+      return true;
+    } else {
+      print(response);
+      return false;
+    }
+  }
 
 
 }

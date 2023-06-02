@@ -47,6 +47,7 @@ dependencies:
   build_runner: ^2.2.0
   flutter_barcode_scanner: ^2.0.0
   accordion: ^2.5.1
+  intl: ^0.18.1
 
 dev_dependencies:
   flutter_test:

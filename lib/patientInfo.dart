@@ -11,6 +11,7 @@ import 'main.dart';
 import 'model/patient_registration_for_scanner_client_view_model.dart';
 import 'scan_document_dto.dart';
 import 'alert.dart';
+import 'package:intl/intl.dart';
 
 class PatientInfo extends StatelessWidget {
   PatientInfo({Key? key}) : super(key: key);
@@ -209,7 +210,7 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                                         item) =>
                                     DropdownMenuItem<String>(
                                         child: Text(
-                                            "[Visit:${item.visitCount.toString()}] ${item.registrationDate.toString()} [${item.registrationTypeName}] [Dpt: ${item.department}]"),
+                                            "[Visit:${item.visitCount.toString()}] ${DateFormat('MM/dd/yyyy').format(item.registrationDate)}  [${item.registrationTypeName}] \n [Dpt: ${item.department}]"),
                                         value: item.registrationId.toString()))
                                 .toList(),
                             onChanged: (value) {
@@ -358,6 +359,12 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                           content: "Success");
                       Navigator.pushReplacement(context,
                           MaterialPageRoute(builder: (context) => MyHomePage()));
+                    }
+                    else {
+                      showAlert(
+                          bContext: context,
+                          title: "Error",
+                          content: "could not upload");
                     }
                     
                   },

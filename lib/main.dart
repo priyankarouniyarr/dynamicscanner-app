@@ -1,4 +1,5 @@
 import 'package:dynamicemrapp/FaBarcodeScanner.dart';
+import 'package:dynamicemrapp/check_connection.dart';
 import 'package:flutter/material.dart';
 import 'package:dynamicemrapp/signIn.dart';
 import 'package:dynamicemrapp/patientInfo.dart';
@@ -45,6 +46,15 @@ class MyApp extends StatelessWidget {
     }
 
     bool isExpired = Jwt.isExpired(jwtToken);
+    String expiryDate = (prefs.getString('DyanmicEmrLoginExpiration') ?? "");
+    DateTime todayDate = DateTime.now();
+    if (expiryDate != "") {
+      DateTime expiryDateTime = DateTime.parse((expiryDate));
+      if (expiryDateTime.compareTo(todayDate) < 0) {
+        isExpired = true;
+      }
+    }
+
     return !isExpired;
   }
 }
@@ -82,6 +92,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       MaterialPageRoute(builder: (context) => SignIn()));
                 },
               ),
+              
             ],
           ),
           body: Center(
@@ -156,10 +167,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 title: const Text('FA Barcode Scanner'),
                 onTap: () {
                   // Navigator.pop(context);
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => FaBarcodeScanner()));
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => FaBarcodeScanner()));
                 },
-              ),              
+              ),
               ListTile(
                 title: const Text('FA Details'),
                 onTap: () {
@@ -168,7 +181,19 @@ class _MyHomePageState extends State<MyHomePage> {
                       MaterialPageRoute(builder: (context) => AccordionPage()));
                 },
               ),
+              ListTile(
+                title: const Text('Check User Connection'),
+                onTap: () {
+                  // Navigator.pop(context);
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => CheckConnection()));
+                },
+              ),
             ],
+            
+          
           ))),
     );
   }
