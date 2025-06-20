@@ -1,12 +1,12 @@
+import 'main.dart';
 import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'model/credential_model.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'apiclient.dart';
-import 'appSettings.dart';
 import 'model/branch.dart';
 import 'model/login_response.dart';
-import 'main.dart';
+import 'screen/api/api_client.dart';
+import 'model/credential_model.dart';
+import 'package:flutter/material.dart';
+import 'screen/appsetting/appSettings.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CheckConnection extends StatelessWidget {
   CheckConnection({Key? key}) : super(key: key);
@@ -16,14 +16,14 @@ class CheckConnection extends StatelessWidget {
     const appTitle = 'Check User Conection';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(appTitle),
-      ),
+      appBar: AppBar(title: const Text(appTitle)),
       body: const CheckConnectionForm(), // body
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
-              context, MaterialPageRoute(builder: (context) => AppSetting()));
+            context,
+            MaterialPageRoute(builder: (context) => AppSetting()),
+          );
         },
         backgroundColor: Colors.green,
         child: const Icon(Icons.settings),
@@ -70,7 +70,9 @@ class CheckConnectionFormState extends State<CheckConnectionForm> {
     setState(() {
       prefs.setString('DynamicEmrLoginToken', loginResponse.token);
       prefs.setString(
-          'DyanmicEmrLoginExpiration', loginResponse.expiration.toString());
+        'DyanmicEmrLoginExpiration',
+        loginResponse.expiration.toString(),
+      );
       prefs.setInt('DyanmicEmrLoginBranchId', branchId);
     });
   }
@@ -110,16 +112,16 @@ class CheckConnectionFormState extends State<CheckConnectionForm> {
                   child: const Text('Check A'),
                   onPressed: () async {
                     try {
-                      bool response = await _apiClient.checkLoginA();
-                      if (response) {
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          const SnackBar(content: Text('Login Success')),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          const SnackBar(content: Text('Unable to login.')),
-                        );
-                      }
+                      //  bool response = await _apiClient.checkLoginA();
+                      // if (response) {
+                      //   ScaffoldMessenger.of(this.context).showSnackBar(
+                      //     const SnackBar(content: Text('Login Success')),
+                      //   );
+                      // } else {
+                      //   ScaffoldMessenger.of(this.context).showSnackBar(
+                      //     const SnackBar(content: Text('Unable to login.')),
+                      //   );
+                      // }
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Unable to login.')),
@@ -130,32 +132,25 @@ class CheckConnectionFormState extends State<CheckConnectionForm> {
                 TextButton(
                   child: const Text('Check B'),
                   onPressed: () async {
-                    try {
-                      bool response = await _apiClient.checkLoginB();
-                      if (response) {
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          const SnackBar(content: Text('Login Success')),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          const SnackBar(content: Text('Unable to login.')),
-                        );
-                      }
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Unable to login.')),
-                      );
-                    }
+                    // try {
+                    //   bool response = await _apiClient.checkLoginB();
+                    //   if (response) {
+                    //     ScaffoldMessenger.of(this.context).showSnackBar(
+                    //       const SnackBar(content: Text('Login Success')),
+                    //     );
+                    //   } else {
+                    //     ScaffoldMessenger.of(this.context).showSnackBar(
+                    //       const SnackBar(content: Text('Unable to login.')),
+                    //     );
+                    //   }
+                    // } catch (e) {
+                    //   ScaffoldMessenger.of(context).showSnackBar(
+                    //     const SnackBar(content: Text('Unable to login.')),
+                    //   );
+                    // }
                   },
                 ),
-              ].expand(
-                (widget) => [
-                  widget,
-                  const SizedBox(
-                    height: 24,
-                  )
-                ],
-              )
+              ].expand((widget) => [widget, const SizedBox(height: 24)]),
             ],
           ),
         ),

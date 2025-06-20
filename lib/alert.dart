@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 
 showAlert({required BuildContext bContext, String? title, String? content}) {
   return showDialog(
-      context: bContext,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            title ?? "",
-            style: TextStyle(color: Colors.white),
+    context: bContext,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text(title ?? "", style: TextStyle(color: Colors.white)),
+        content: Text(content ?? ""),
+        contentTextStyle: TextStyle(color: Colors.red),
+        actions: [
+          TextButton(
+            onPressed: () => {Navigator.pop(context)},
+            child: Text("Okay"),
           ),
-          content: Text(content ?? ""),
-          actions: [
-            TextButton(
-                onPressed: () => {Navigator.pop(context)}, child: Text("Okay"))
-          ],
-        );
-      });
+        ],
+      );
+    },
+  );
 }
