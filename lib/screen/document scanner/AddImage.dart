@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'dart:developer';
 import '../../alert.dart';
-import '../../DisplayPicture.dart';
 import 'package:flutter/material.dart';
+import 'dart:ui'; // For ImageFilter.blur
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -20,6 +20,12 @@ class _AddImageState extends State<AddImage> {
   ImagePicker imagePicker = ImagePicker();
   String tempPath = "";
   String appDocPath = "";
+
+  // Track interaction state for each card
+  bool _isCameraCardInteracted = false;
+  bool _isGalleryCardInteracted = false;
+  bool _isUploadCardInteracted = false;
+  bool _isViewCardInteracted = false;
 
   _imageFromCamera() async {
     try {
@@ -41,18 +47,14 @@ class _AddImageState extends State<AddImage> {
         source: ImageSource.camera,
       );
       log("Captured Image Path: ${capturedImage?.path}");
+      if (!mounted) return;
       if (capturedImage == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("No file  was  selected"),
+            content: Text("No file was selected"),
             backgroundColor: Colors.red,
           ),
         );
-        //  showAlert(
-        //     bContext: context,
-        //     title: "Error choosing file",
-        //     content: "No file was selected",
-        //   );
       } else {
         final File imagePath = File(capturedImage.path);
         log("Image Path: ${imagePath.path}");
@@ -61,7 +63,6 @@ class _AddImageState extends State<AddImage> {
         String targetPath = '$appDocPath/$fileName';
         log("Target Path: $targetPath");
 
-        // final File newImage = await imagePath.copy('$appDocPath/$fileName');
         var result = await FlutterImageCompress.compressAndGetFile(
           imagePath.absolute.path,
           targetPath,
@@ -70,23 +71,28 @@ class _AddImageState extends State<AddImage> {
           quality: 50,
         );
 
-        // setState(() {
-        //   _image = imagePath;
-        // });
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(
-        //     builder: (context) =>
-        //         DisplayPicture(image: _image, context: context),
-        //   ),
-        // );
+        if (result != null && mounted) {
+          setState(() {
+            _image = File(result.path);
+          });
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Failed to compress image"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
-    } catch (e) {
-      showAlert(
-        bContext: context,
-        title: "Error capturing image file",
-        content: e.toString(),
-      );
+    } catch (e, stackTrace) {
+      log("Error in _imageFromCamera: $e\n$stackTrace");
+      if (mounted) {
+        showAlert(
+          bContext: context,
+          title: "Error capturing image file",
+          content: e.toString(),
+        );
+      }
     }
   }
 
@@ -110,7 +116,7 @@ class _AddImageState extends State<AddImage> {
         source: ImageSource.gallery,
       );
 
-      if (!mounted) return; // Ensure context is valid
+      if (!mounted) return;
       if (uploadedImage == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -122,30 +128,41 @@ class _AddImageState extends State<AddImage> {
       }
 
       final File imagePath = File(uploadedImage.path);
-      setState(() {
-        _image = imagePath;
-      });
-
       log("Image Path: ${imagePath.path}");
       String fileName = imagePath.path.split('/').last;
       log("File Name: $fileName");
       String targetPath = '$appDocPath/$fileName';
       log("Target Path: $targetPath");
 
-      await FlutterImageCompress.compressAndGetFile(
+      var result = await FlutterImageCompress.compressAndGetFile(
         imagePath.absolute.path,
         targetPath,
         minWidth: 2300,
         minHeight: 1500,
         quality: 50,
       );
-    } catch (error) {
-      if (!mounted) return; // Ensure context is valid
-      showAlert(
-        bContext: context,
-        title: "Error capturing image file",
-        content: error.toString(),
-      );
+
+      if (result != null && mounted) {
+        setState(() {
+          _image = File(result.path);
+        });
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to compress image"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      log("Error in _imageFromGallery: $e\n$stackTrace");
+      if (mounted) {
+        showAlert(
+          bContext: context,
+          title: "Error selecting image file",
+          content: e.toString(),
+        );
+      }
     }
   }
 
@@ -175,80 +192,39 @@ class _AddImageState extends State<AddImage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          216,
-                          213,
-                          213,
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          vertical: 40,
-                          horizontal: 30,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(Icons.camera_alt_outlined, size: 60),
-
-                          SizedBox(height: 10),
-                          Text(
-                            "Take Picture",
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ],
-                      ),
-                      onPressed: () async {
-                        await _imageFromCamera();
-                        setState(() {}); // Update UI after selecting the file
-                      },
-                    ),
+                  _buildGlassCard(
+                    icon: Icons.camera_alt_outlined,
+                    label: "Take Picture",
+                    isInteracted: _isCameraCardInteracted,
+                    onTap: () async {
+                      await _imageFromCamera();
+                      if (mounted) setState(() {});
+                    },
+                    onTapDown: () =>
+                        setState(() => _isCameraCardInteracted = true),
+                    onTapUp: () =>
+                        setState(() => _isCameraCardInteracted = false),
+                    onTapCancel: () =>
+                        setState(() => _isCameraCardInteracted = false),
+                    onHover: (isHovered) =>
+                        setState(() => _isCameraCardInteracted = isHovered),
                   ),
-
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          216,
-                          213,
-                          213,
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          vertical: 40,
-                          horizontal: 30,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(Icons.browse_gallery_sharp, size: 60),
-                          SizedBox(height: 10),
-                          Text(
-                            "From Gallery",
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ],
-                      ),
-                      onPressed: () => {_imageFromGallery()},
-                    ),
+                  _buildGlassCard(
+                    icon: Icons.browse_gallery_sharp,
+                    label: "Pick From Gallery",
+                    isInteracted: _isGalleryCardInteracted,
+                    onTap: () async {
+                      await _imageFromGallery();
+                      if (mounted) setState(() {});
+                    },
+                    onTapDown: () =>
+                        setState(() => _isGalleryCardInteracted = true),
+                    onTapUp: () =>
+                        setState(() => _isGalleryCardInteracted = false),
+                    onTapCancel: () =>
+                        setState(() => _isGalleryCardInteracted = false),
+                    onHover: (isHovered) =>
+                        setState(() => _isGalleryCardInteracted = isHovered),
                   ),
                 ],
               ),
@@ -256,95 +232,113 @@ class _AddImageState extends State<AddImage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          216,
-                          213,
-                          213,
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          vertical: 40,
-                          horizontal: 20,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(Icons.photo_library_outlined, size: 60),
-
-                          SizedBox(height: 10),
-                          Text(
-                            "Upload Picture",
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ],
-                      ),
-                      onPressed: () => {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PatientInfo(),
-                          ),
-                        ),
-                      },
-                    ),
+                  _buildGlassCard(
+                    icon: Icons.photo_library_outlined,
+                    label: "Upload Picture",
+                    isInteracted: _isUploadCardInteracted,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => PatientInfo()),
+                      );
+                    },
+                    onTapDown: () =>
+                        setState(() => _isUploadCardInteracted = true),
+                    onTapUp: () =>
+                        setState(() => _isUploadCardInteracted = false),
+                    onTapCancel: () =>
+                        setState(() => _isUploadCardInteracted = false),
+                    onHover: (isHovered) =>
+                        setState(() => _isUploadCardInteracted = isHovered),
                   ),
-
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          216,
-                          213,
-                          213,
+                  _buildGlassCard(
+                    icon: Icons.document_scanner_outlined,
+                    label: "View Documents",
+                    isInteracted: _isViewCardInteracted,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => Viewdocuments(),
                         ),
-                        padding: EdgeInsets.symmetric(
-                          vertical: 40,
-                          horizontal: 15,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(Icons.document_scanner_rounded, size: 60),
-                          SizedBox(height: 10),
-                          Text(
-                            "View Documents",
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ],
-                      ),
-                      onPressed: () => {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => Viewdocuments(),
-                          ),
-                        ),
-                      },
-                    ),
+                      );
+                    },
+                    onTapDown: () =>
+                        setState(() => _isViewCardInteracted = true),
+                    onTapUp: () =>
+                        setState(() => _isViewCardInteracted = false),
+                    onTapCancel: () =>
+                        setState(() => _isViewCardInteracted = false),
+                    onHover: (isHovered) =>
+                        setState(() => _isViewCardInteracted = isHovered),
                   ),
                 ],
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassCard({
+    required IconData icon,
+    required String label,
+    required bool isInteracted,
+    required VoidCallback onTap,
+    required VoidCallback onTapDown,
+    required VoidCallback onTapUp,
+    required VoidCallback onTapCancel,
+    required Function(bool) onHover,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      onTapDown: (_) => onTapDown(),
+      onTapUp: (_) => onTapUp(),
+      onTapCancel: onTapCancel,
+      onHover: onHover,
+      borderRadius: BorderRadius.circular(20),
+      splashColor: Colors.blue.withOpacity(0.3),
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 50),
+        curve: Curves.easeInOut,
+        transform: Matrix4.identity()..scale(isInteracted ? 1.15 : 1.0),
+        transformAlignment: Alignment.center,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isInteracted ? Colors.white : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.purple, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isInteracted ? 0.3 : 0.1),
+                    blurRadius: isInteracted ? 15 : 10,
+                    offset: Offset(0, 9),
+                  ),
+                ],
+              ),
+              padding: EdgeInsets.symmetric(vertical: 40, horizontal: 30),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Icon(icon, size: 40, color: Colors.blue),
+                  SizedBox(height: 8),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
