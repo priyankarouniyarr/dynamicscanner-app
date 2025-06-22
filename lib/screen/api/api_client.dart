@@ -103,28 +103,35 @@ class ApiClient {
     var url = Uri.parse(
       basePath + '/api/Scanner/${patientRegistrationid.toString()}',
     );
-    print(url);
+    print("Upload URL: $url");
+    print("Token: $token");
     var jsonObj = json.encode(dto.toJson());
+    print("Request body: $jsonObj");
 
-    var response = await http.post(
-      url,
-      body: jsonObj,
-      headers: {
-        "Authorization": 'Bearer $token',
-        "Content-Type": "application/json",
-      },
-    );
+    try {
+      var response = await http.post(
+        url,
+        body: jsonObj,
+        headers: {
+          "Authorization": 'Bearer $token',
+          "Content-Type": "application/json",
+        },
+      );
+      print("Response Status Code: ${response.statusCode}");
+      print("Response Body: ${response.body}");
 
-    if (response.statusCode == 200) {
-      // print(json.decode(response.body));
-      return true;
-    } else {
-      print(response.statusCode);
-      return false;
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        throw Exception(
+          'Upload failed with status ${response.statusCode}: ${response.body}',
+        );
+      }
+    } catch (e) {
+      print("Upload error: $e");
+      throw Exception('Upload failed: $e');
     }
-  }
-
-  //   Future<bool> checkLoginA() async {
+  } //   Future<bool> checkLoginA() async {
   //     final prefs = await SharedPreferences.getInstance();
   //     String basePath = (prefs.getString('DynamicEmrApiPath') ?? "");
   //     String token = (prefs.getString('DynamicEmrLoginToken') ?? "");

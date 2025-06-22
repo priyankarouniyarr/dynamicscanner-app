@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:dynamicemrapp/FaCardDetails.dart';
 import 'package:dynamicemrapp/screen/sign%20in/signIn.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dynamicemrapp/screen/document%20scanner/AddImage.dart';
-import 'package:dynamicemrapp/check_connection.dart' show CheckConnection;
 
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key? key, this.title}) : super(key: key);

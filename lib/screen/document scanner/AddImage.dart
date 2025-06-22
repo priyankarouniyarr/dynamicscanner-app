@@ -42,11 +42,17 @@ class _AddImageState extends State<AddImage> {
       );
       log("Captured Image Path: ${capturedImage?.path}");
       if (capturedImage == null) {
-        showAlert(
-          bContext: context,
-          title: "Error choosing file",
-          content: "No file was selected",
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("No file  was  selected"),
+            backgroundColor: Colors.red,
+          ),
         );
+        //  showAlert(
+        //     bContext: context,
+        //     title: "Error choosing file",
+        //     content: "No file was selected",
+        //   );
       } else {
         final File imagePath = File(capturedImage.path);
         log("Image Path: ${imagePath.path}");
@@ -89,22 +95,23 @@ class _AddImageState extends State<AddImage> {
       source: ImageSource.gallery,
     );
     if (uploadedImage == null) {
-      showAlert(
-        bContext: context,
-        title: "Error choosing file",
-        content: "No file was selected",
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("No image to upload"),
+          backgroundColor: Colors.red,
+        ),
       );
     } else {
       final File imagePath = File(uploadedImage.path);
       setState(() {
         _image = imagePath;
       });
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DisplayPicture(image: _image, context: context),
-        ),
-      );
+      // Navigator.push(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (context) => DisplayPicture(image: _image, context: context),
+      //   ),
+      // );
     }
   }
 
@@ -131,32 +138,87 @@ class _AddImageState extends State<AddImage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 216, 213, 213),
-                  padding: EdgeInsets.symmetric(vertical: 40, horizontal: 60),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Icon(Icons.camera_alt_outlined, size: 60),
-                    ),
-                    Text(
-                      "Take Picture",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w400,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          216,
+                          213,
+                          213,
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 40,
+                          horizontal: 30,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
                       ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.camera_alt_outlined, size: 60),
+
+                          SizedBox(height: 10),
+                          Text(
+                            "Take Picture",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                      onPressed: () async {
+                        await _imageFromCamera();
+                        setState(() {}); // Update UI after selecting the file
+                      },
                     ),
-                  ],
-                ),
-                onPressed: () => {_imageFromCamera()},
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          216,
+                          213,
+                          213,
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 40,
+                          horizontal: 30,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.browse_gallery_sharp, size: 60),
+                          SizedBox(height: 10),
+                          Text(
+                            "From Gallery",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                      onPressed: () => {_imageFromGallery()},
+                    ),
+                  ),
+                ],
               ),
+
               //upload picture
               ElevatedButton(
                 style: ElevatedButton.styleFrom(

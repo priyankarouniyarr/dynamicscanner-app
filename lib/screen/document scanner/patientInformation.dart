@@ -47,7 +47,6 @@ class PatientInfo extends StatelessWidget {
   }
 }
 
-//  a Form widget.
 class PatientInfoForm extends StatefulWidget {
   const PatientInfoForm({super.key});
 
@@ -57,7 +56,6 @@ class PatientInfoForm extends StatefulWidget {
   }
 }
 
-// This class holds data related to the form.
 class PatientInfoFormState extends State<PatientInfoForm> {
   final _formKey = GlobalKey<FormState>();
 
@@ -73,19 +71,15 @@ class PatientInfoFormState extends State<PatientInfoForm> {
 
   late Future<List<PatientRegistrationForScannerClientViewModel>> visits;
 
-  // bool _isInAsyncCall = false;
-
   @override
   void initState() {
     super.initState();
-
     _loadForm();
   }
 
   Future<void> _loadForm() async {
     List<PatientRegistrationForScannerClientViewModel> visitList =
         <PatientRegistrationForScannerClientViewModel>[];
-
     this.visits = Future.sync(() => visitList);
   }
 
@@ -147,9 +141,7 @@ class PatientInfoFormState extends State<PatientInfoForm> {
     _debounce = Timer(const Duration(milliseconds: 1000), () async {
       PatientForScannerClientViewModel patientVisits = await _apiClient
           .getPatientByMrn(mrn);
-
       patientNameTextField.text = patientVisits.fullName;
-
       List<PatientRegistrationForScannerClientViewModel> visitlist =
           List<PatientRegistrationForScannerClientViewModel>.from(
             patientVisits.visits.map(
@@ -157,9 +149,7 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                   PatientRegistrationForScannerClientViewModel.fromJson(model),
             ),
           );
-
       this.visits = Future.sync(() => visitlist);
-
       setState(() {});
     });
   }
@@ -170,13 +160,11 @@ class PatientInfoFormState extends State<PatientInfoForm> {
     var lister = dir.list(recursive: false);
     lister.listen(
       (file) => files.add(file),
-
       onDone: () => completer.complete(files),
     );
     return completer.future;
   }
 
-  //submit preview
   Future<void> _showConfirmationDialog(BuildContext context) async {
     return showDialog<void>(
       context: context,
@@ -184,9 +172,7 @@ class PatientInfoFormState extends State<PatientInfoForm> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Confirm Submission'),
-          content: Text(
-            'Are you sure you want to submit the form with the selected details?',
-          ),
+          content: Text('Are you sure you want to submit the form?'),
           actions: <Widget>[
             TextButton(
               child: Text('No'),
@@ -196,87 +182,7 @@ class PatientInfoFormState extends State<PatientInfoForm> {
               child: Text('Yes'),
               onPressed: () async {
                 Navigator.of(context).pop();
-
-                String appDocPath = "";
-                Directory appDocDir = await getApplicationDocumentsDirectory();
-                final Directory appDocDirFolder = Directory(
-                  '${appDocDir.path}/DynamicEmrScan/',
-                );
-                final Directory appScanFolder = await appDocDirFolder.create(
-                  recursive: true,
-                );
-                appDocPath = appScanFolder.path;
-
-                List<FileSystemEntity> folderFiles = await dirContents(
-                  appScanFolder,
-                );
-                List<ScanDocumentDto> docs = [];
-                var fileIndex = 0;
-                if (folderFiles.isNotEmpty) {
-                  for (var entity in folderFiles) {
-                    if (await FileSystemEntity.isFile(entity.path)) {
-                      var f = File(entity.path);
-                      List<int> fileBytes = await f.readAsBytes();
-                      String base64Image = base64Encode(fileBytes);
-                      ScanDocumentDto docDto = ScanDocumentDto(
-                        base64Image,
-                        fileIndex,
-                        _patientRegistrationId,
-                      );
-                      docs.add(docDto);
-                      fileIndex++;
-                    }
-                  }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("No file to upload"),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
-                }
-
-                ScanDocumentMasterDto parameterObj = ScanDocumentMasterDto(
-                  docs,
-                  _serviceType,
-                  _pictureSource,
-                  _isScanComplete,
-                  _pictureType,
-                );
-
-                var isSuccess = await _apiClient.uploadImages(
-                  _patientRegistrationId,
-                  parameterObj,
-                );
-                if (isSuccess) {
-                  if (folderFiles.isNotEmpty) {
-                    for (var entity in folderFiles) {
-                      if (await FileSystemEntity.isFile(entity.path)) {
-                        var f = File(entity.path);
-                        await f.delete();
-                      }
-                    }
-                  }
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Upload successful"),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => MyHomePage()),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Could not upload"),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
+                await _handleSubmission(context);
               },
             ),
           ],
@@ -285,9 +191,125 @@ class PatientInfoFormState extends State<PatientInfoForm> {
     );
   }
 
+  Future<void> _handleSubmission(BuildContext context) async {
+    if (_formKey.currentState?.validate() ?? false) {
+      if (_patientRegistrationId == 0 ||
+          _serviceType.isEmpty ||
+          _pictureSource.isEmpty ||
+          _pictureType.isEmpty ||
+          _isScanComplete.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Please fill all the above required fields."),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      String appDocPath = "";
+      Directory appDocDir = await getApplicationDocumentsDirectory();
+      final Directory appDocDirFolder = Directory(
+        '${appDocDir.path}/DynamicEmrScan/',
+      );
+      final Directory appScanFolder = await appDocDirFolder.create(
+        recursive: true,
+      );
+      appDocPath = appScanFolder.path;
+      print("App Document Path: $appDocPath");
+
+      List<FileSystemEntity> folderFiles = await dirContents(appScanFolder);
+      List<ScanDocumentDto> docs = [];
+      var fileIndex = 0;
+      if (folderFiles.isNotEmpty) {
+        for (var entity in folderFiles) {
+          if (await FileSystemEntity.isFile(entity.path)) {
+            var f = File(entity.path);
+            List<int> imageBytes = await f.readAsBytes();
+            String base64Image = base64Encode(imageBytes);
+            print("Base64 image length for ${f.path}: ${base64Image.length}");
+            ScanDocumentDto docDto = ScanDocumentDto(
+              base64Image,
+              fileIndex,
+              _patientRegistrationId,
+            );
+            docs.add(docDto);
+            fileIndex++;
+          }
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("No file to upload"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      ScanDocumentMasterDto parameterObj = ScanDocumentMasterDto(
+        docs,
+        _serviceType,
+        _pictureSource,
+        _isScanComplete,
+        _pictureType,
+      );
+
+      try {
+        bool isSuccess = await _apiClient.uploadImages(
+          _patientRegistrationId,
+          parameterObj,
+        );
+        if (isSuccess) {
+          if (folderFiles.isNotEmpty) {
+            for (var entity in folderFiles) {
+              if (await FileSystemEntity.isFile(entity.path)) {
+                var f = File(entity.path);
+                await f.delete();
+              }
+            }
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Upload successfully"),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => MyHomePage()),
+          );
+        } else {
+          print("Upload failed");
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Could not upload"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        print("Upload error: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Upload failed: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Please fill all required fields"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Build a Form widget using the _formKey created above.
     return Form(
       key: _formKey,
       child: Scrollbar(
@@ -312,7 +334,6 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                     });
                   },
                 ),
-
                 FutureBuilder<
                   List<PatientRegistrationForScannerClientViewModel>
                 >(
@@ -372,9 +393,7 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                     hintText: 'Patient Name',
                     labelText: 'Patient Name',
                   ),
-                  onChanged: (value) {
-                    //formData.email = value;
-                  },
+                  onChanged: (value) {},
                 ),
                 DropdownButtonFormField(
                   decoration: const InputDecoration(
@@ -428,7 +447,6 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                     });
                   },
                 ),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -443,9 +461,8 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                       onPressed: () {
                         setState(() {
                           _formKey.currentState?.reset();
-                          patientNameTextField.clear(); // Clear patient name
+                          patientNameTextField.clear();
                         });
-
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
@@ -470,7 +487,7 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                                   _isScanComplete.isNotEmpty) {
                                 return Colors.blue;
                               }
-                              return Colors.grey.shade900;
+                              return Colors.grey.shade300;
                             }),
                       ),
                       child: const Text(
@@ -479,105 +496,6 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                       ),
                       onPressed: () {
                         _showConfirmationDialog(context);
-                        //   if (_patientRegistrationId == 0 ||
-                        //       _serviceType.isEmpty ||
-                        //       _pictureSource.isEmpty ||
-                        //       _pictureType.isEmpty ||
-                        //       _isScanComplete.isEmpty) {
-                        //     ScaffoldMessenger.of(context).showSnackBar(
-                        //       SnackBar(
-                        //         content: Text(
-                        //           "Please fill all the above required fields.",
-                        //         ),
-                        //         backgroundColor: Colors.red,
-                        //       ),
-                        //     );
-                        //     return;
-                        //   }
-
-                        //   String appDocPath = "";
-                        //   Directory appDocDir =
-                        //       await getApplicationDocumentsDirectory();
-                        //   final Directory appDocDirFolder = Directory(
-                        //     '${appDocDir.path}/DynamicEmrScan/',
-                        //   );
-                        //   final Directory appScanFolder = await appDocDirFolder
-                        //       .create(recursive: true);
-                        //   appDocPath = appScanFolder.path;
-
-                        //   List<FileSystemEntity> folderFiles = await dirContents(
-                        //     appScanFolder,
-                        //   );
-                        //   List<ScanDocumentDto> docs = [];
-                        //   var fileIndex = 0;
-                        //   if (folderFiles.isNotEmpty) {
-                        //     for (var entity in folderFiles) {
-                        //       if (await FileSystemEntity.isFile(entity.path)) {
-                        //         var f = File(entity.path);
-                        //         List<int> imageBytes = await f.readAsBytes();
-                        //         String base64Image = base64Encode(imageBytes);
-                        //         ScanDocumentDto docDto = ScanDocumentDto(
-                        //           base64Image,
-                        //           fileIndex,
-                        //           _patientRegistrationId,
-                        //         );
-                        //         docs.add(docDto);
-                        //       }
-                        //     }
-                        //   } else {
-                        //     ScaffoldMessenger.of(context).showSnackBar(
-                        //       SnackBar(
-                        //         content: Text("No file to upload"),
-                        //         backgroundColor: Colors.red,
-                        //       ),
-                        //     );
-                        //     return;
-                        //   }
-
-                        //   ScanDocumentMasterDto parameterObj =
-                        //       ScanDocumentMasterDto(
-                        //         docs,
-                        //         _serviceType,
-                        //         _pictureSource,
-                        //         _isScanComplete,
-                        //         _pictureType,
-                        //       );
-
-                        //   var isSuccess = await _apiClient.uploadImages(
-                        //     _patientRegistrationId,
-                        //     parameterObj,
-                        //   );
-                        //   if (isSuccess == true) {
-                        //     if (folderFiles.isNotEmpty) {
-                        //       for (var entity in folderFiles) {
-                        //         if (await FileSystemEntity.isFile(entity.path)) {
-                        //           var f = File(entity.path);
-                        //           await f.delete();
-                        //         }
-                        //       }
-                        //     }
-
-                        //     ScaffoldMessenger.of(context).showSnackBar(
-                        //       SnackBar(
-                        //         content: Text("Upload successful"),
-                        //         backgroundColor: Colors.green,
-                        //       ),
-                        //     );
-                        //     Navigator.pushReplacement(
-                        //       context,
-                        //       MaterialPageRoute(
-                        //         builder: (context) => MyHomePage(),
-                        //       ),
-                        //     );
-                        //   } else {
-                        //     ScaffoldMessenger.of(context).showSnackBar(
-                        //       SnackBar(
-                        //         content: Text("Could not upload"),
-                        //         backgroundColor: Colors.red,
-                        //       ),
-                        //     );
-                        //   }
-                        // },
                       },
                     ),
                   ],

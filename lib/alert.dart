@@ -5,7 +5,7 @@ showAlert({required BuildContext bContext, String? title, String? content}) {
     context: bContext,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Text(title ?? "", style: TextStyle(color: Colors.white)),
+        title: Text(title ?? "", style: TextStyle(color: Colors.black)),
         content: Text(content ?? ""),
         contentTextStyle: TextStyle(color: Colors.red),
         actions: [
