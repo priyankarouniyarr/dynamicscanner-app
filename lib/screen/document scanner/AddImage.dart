@@ -91,27 +91,61 @@ class _AddImageState extends State<AddImage> {
   }
 
   _imageFromGallery() async {
-    XFile? uploadedImage = await imagePicker.pickImage(
-      source: ImageSource.gallery,
-    );
-    if (uploadedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("No image to upload"),
-          backgroundColor: Colors.red,
-        ),
+    try {
+      Directory tempDir = await getTemporaryDirectory();
+      tempPath = tempDir.path;
+      log("Temporary Directory Path: $tempPath");
+
+      Directory appDocDir = await getApplicationDocumentsDirectory();
+      final Directory appDocDirFolder = Directory(
+        '${appDocDir.path}/DynamicEmrScan/',
       );
-    } else {
+      final Directory appScanFolder = await appDocDirFolder.create(
+        recursive: true,
+      );
+      appDocPath = appScanFolder.path;
+      log("Application Document Directory Path: $appDocPath");
+
+      XFile? uploadedImage = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+      );
+
+      if (!mounted) return; // Ensure context is valid
+      if (uploadedImage == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("No image to upload"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       final File imagePath = File(uploadedImage.path);
       setState(() {
         _image = imagePath;
       });
-      // Navigator.push(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder: (context) => DisplayPicture(image: _image, context: context),
-      //   ),
-      // );
+
+      log("Image Path: ${imagePath.path}");
+      String fileName = imagePath.path.split('/').last;
+      log("File Name: $fileName");
+      String targetPath = '$appDocPath/$fileName';
+      log("Target Path: $targetPath");
+
+      await FlutterImageCompress.compressAndGetFile(
+        imagePath.absolute.path,
+        targetPath,
+        minWidth: 2300,
+        minHeight: 1500,
+        quality: 50,
+      );
+    } catch (error) {
+      if (!mounted) return; // Ensure context is valid
+      showAlert(
+        bContext: context,
+        title: "Error capturing image file",
+        content: error.toString(),
+      );
     }
   }
 
@@ -136,7 +170,7 @@ class _AddImageState extends State<AddImage> {
         backgroundColor: Colors.transparent,
         body: Center(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -218,70 +252,97 @@ class _AddImageState extends State<AddImage> {
                   ),
                 ],
               ),
+              SizedBox(height: 30),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          216,
+                          213,
+                          213,
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 40,
+                          horizontal: 20,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.photo_library_outlined, size: 60),
 
-              //upload picture
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 216, 213, 213),
-                  padding: EdgeInsets.symmetric(vertical: 40, horizontal: 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Icon(Icons.photo_library_outlined, size: 60),
-                    ),
-                    Text(
-                      "Upload Picture",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
+                          SizedBox(height: 10),
+                          Text(
+                            "Upload Picture",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
                       ),
+                      onPressed: () => {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PatientInfo(),
+                          ),
+                        ),
+                      },
                     ),
-                  ],
-                ),
-                onPressed: () => {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => PatientInfo()),
                   ),
-                },
-              ),
-              //documents uplodaed to view here
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 216, 213, 213),
-                  padding: EdgeInsets.symmetric(vertical: 40, horizontal: 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Icon(Icons.edit_document, size: 50),
-                    ),
-                    Text(
-                      "     View \nDocuments",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
+
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          216,
+                          213,
+                          213,
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 40,
+                          horizontal: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
                       ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.document_scanner_rounded, size: 60),
+                          SizedBox(height: 10),
+                          Text(
+                            "View Documents",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                      onPressed: () => {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => Viewdocuments(),
+                          ),
+                        ),
+                      },
                     ),
-                  ],
-                ),
-                onPressed: () => {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => Viewdocuments()),
                   ),
-                },
+                ],
               ),
             ],
           ),
