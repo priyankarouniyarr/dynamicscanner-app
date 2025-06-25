@@ -5,6 +5,7 @@ import 'dart:developer';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import '../../model/scan_document_dto.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dynamicemrapp/screen/homepage.dart';
 import 'package:dynamicemrapp/screen/api/api_client.dart';
@@ -14,6 +15,8 @@ import 'package:dynamicemrapp/model/patient_for_scanner_client_view_model.dart';
 
 class PatientInfo extends StatelessWidget {
   PatientInfo({Key? key}) : super(key: key);
+
+  final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
   @override
   Widget build(BuildContext context) {
@@ -30,25 +33,34 @@ class PatientInfo extends StatelessWidget {
           ],
         ),
       ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
+      child: ScaffoldMessenger(
+        key: _scaffoldMessengerKey,
+        child: Scaffold(
           backgroundColor: Colors.transparent,
-          title: const Text(
-            appTitle,
-            style: TextStyle(fontSize: 20, color: Colors.white),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            title: Text(
+              appTitle,
+              style: GoogleFonts.poppins(
+                fontSize: 22,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            centerTitle: true,
+            leading: BackButton(color: Colors.white),
           ),
-          centerTitle: true,
-          leading: BackButton(color: Colors.white),
+          body: PatientInfoForm(scaffoldMessengerKey: _scaffoldMessengerKey),
         ),
-        body: PatientInfoForm(),
       ),
     );
   }
 }
 
 class PatientInfoForm extends StatefulWidget {
-  const PatientInfoForm({super.key});
+  final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey;
+
+  const PatientInfoForm({super.key, required this.scaffoldMessengerKey});
 
   @override
   PatientInfoFormState createState() {
@@ -70,6 +82,8 @@ class PatientInfoFormState extends State<PatientInfoForm> {
   String _isScanComplete = "";
 
   late Future<List<PatientRegistrationForScannerClientViewModel>> visits;
+  Timer? _debounce;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -78,14 +92,15 @@ class PatientInfoFormState extends State<PatientInfoForm> {
   }
 
   Future<void> _loadForm() async {
-    List<PatientRegistrationForScannerClientViewModel> visitList =
-        <PatientRegistrationForScannerClientViewModel>[];
-    this.visits = Future.sync(() => visitList);
+    List<PatientRegistrationForScannerClientViewModel> visitList = [];
+    visits = Future.value(visitList);
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     patientNameTextField.dispose();
+    scrollController.dispose();
     super.dispose();
   }
 
@@ -134,11 +149,10 @@ class PatientInfoFormState extends State<PatientInfoForm> {
     return menuItems;
   }
 
-  Timer? _debounce;
-
   Future<void> _loadPatientAsync(String mrn) async {
     if (_debounce?.isActive ?? false) _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 1000), () async {
+      if (!mounted) return;
       PatientForScannerClientViewModel patientVisits = await _apiClient
           .getPatientByMrn(mrn);
       patientNameTextField.text = patientVisits.fullName;
@@ -149,8 +163,8 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                   PatientRegistrationForScannerClientViewModel.fromJson(model),
             ),
           );
-      this.visits = Future.sync(() => visitlist);
-      setState(() {});
+      visits = Future.value(visitlist);
+      if (mounted) setState(() {});
     });
   }
 
@@ -165,24 +179,25 @@ class PatientInfoFormState extends State<PatientInfoForm> {
     return completer.future;
   }
 
-  Future<void> _showConfirmationDialog(BuildContext context) async {
+  Future<void> _showConfirmationDialog() async {
+    if (!mounted) return;
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text('Confirm Submission'),
           content: Text('Are you sure you want to submit the form?'),
           actions: <Widget>[
             TextButton(
               child: Text('No'),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
             ),
             TextButton(
               child: Text('Yes'),
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await _handleSubmission(context);
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _handleSubmission();
               },
             ),
           ],
@@ -191,23 +206,39 @@ class PatientInfoFormState extends State<PatientInfoForm> {
     );
   }
 
-  Future<void> _handleSubmission(BuildContext context) async {
-    if (_formKey.currentState?.validate() ?? false) {
-      if (_patientRegistrationId == 0 ||
-          _serviceType.isEmpty ||
-          _pictureSource.isEmpty ||
-          _pictureType.isEmpty ||
-          _isScanComplete.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
+  Future<void> _handleSubmission() async {
+    if (!mounted || !(_formKey.currentState?.validate() ?? false)) {
+      if (mounted) {
+        widget.scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text("Please fill all required fields"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (_patientRegistrationId == 0 ||
+        _serviceType.isEmpty ||
+        _pictureSource.isEmpty ||
+        _pictureType.isEmpty ||
+        _isScanComplete.isEmpty) {
+      if (mounted) {
+        widget.scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text("Please fill all the above required fields."),
             backgroundColor: Colors.red,
           ),
         );
-        return;
       }
+      return;
+    }
 
-      String appDocPath = "";
+    setState(() => _isLoading = true);
+
+    String appDocPath = "";
+    try {
       Directory appDocDir = await getApplicationDocumentsDirectory();
       final Directory appDocDirFolder = Directory(
         '${appDocDir.path}/DynamicEmrScan/',
@@ -221,30 +252,34 @@ class PatientInfoFormState extends State<PatientInfoForm> {
       List<FileSystemEntity> folderFiles = await dirContents(appScanFolder);
       List<ScanDocumentDto> docs = [];
       var fileIndex = 0;
-      if (folderFiles.isNotEmpty) {
-        for (var entity in folderFiles) {
-          if (await FileSystemEntity.isFile(entity.path)) {
-            var f = File(entity.path);
-            List<int> imageBytes = await f.readAsBytes();
-            String base64Image = base64Encode(imageBytes);
-            print("Base64 image length for ${f.path}: ${base64Image.length}");
-            ScanDocumentDto docDto = ScanDocumentDto(
-              base64Image,
-              fileIndex,
-              _patientRegistrationId,
-            );
-            docs.add(docDto);
-            fileIndex++;
-          }
+
+      if (folderFiles.isEmpty) {
+        if (mounted) {
+          widget.scaffoldMessengerKey.currentState?.showSnackBar(
+            SnackBar(
+              content: Text("No file to upload"),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("No file to upload"),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() => _isLoading = false);
         return;
+      }
+
+      for (var entity in folderFiles) {
+        if (await FileSystemEntity.isFile(entity.path)) {
+          var f = File(entity.path);
+          List<int> imageBytes = await f.readAsBytes();
+          String base64Image = base64Encode(imageBytes);
+          print("Base64 image length for ${f.path}: ${base64Image.length}");
+          ScanDocumentDto docDto = ScanDocumentDto(
+            base64Image,
+            fileIndex,
+            _patientRegistrationId,
+          );
+          docs.add(docDto);
+          fileIndex++;
+        }
       }
 
       ScanDocumentMasterDto parameterObj = ScanDocumentMasterDto(
@@ -255,56 +290,61 @@ class PatientInfoFormState extends State<PatientInfoForm> {
         _pictureType,
       );
 
-      try {
-        bool isSuccess = await _apiClient.uploadImages(
-          _patientRegistrationId,
-          parameterObj,
-        );
-        if (isSuccess) {
-          if (folderFiles.isNotEmpty) {
-            for (var entity in folderFiles) {
-              if (await FileSystemEntity.isFile(entity.path)) {
-                var f = File(entity.path);
-                await f.delete();
-              }
-            }
-          }
+      bool isSuccess = await _apiClient.uploadImages(
+        _patientRegistrationId,
+        parameterObj,
+      );
 
-          ScaffoldMessenger.of(context).showSnackBar(
+      if (isSuccess) {
+        for (var entity in folderFiles) {
+          if (await FileSystemEntity.isFile(entity.path)) {
+            var f = File(entity.path);
+            await f.delete();
+          }
+        }
+
+        if (mounted) {
+          widget.scaffoldMessengerKey.currentState?.showSnackBar(
             SnackBar(
               content: Text("Upload successfully"),
               backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
             ),
           );
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => MyHomePage()),
-          );
-        } else {
-          print("Upload failed");
-          ScaffoldMessenger.of(context).showSnackBar(
+
+          await Future.delayed(Duration(seconds: 2));
+
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => MyHomePage()),
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          widget.scaffoldMessengerKey.currentState?.showSnackBar(
             SnackBar(
               content: Text("Could not upload"),
               backgroundColor: Colors.red,
             ),
           );
         }
-      } catch (e) {
-        print("Upload error: $e");
-        ScaffoldMessenger.of(context).showSnackBar(
+      }
+    } catch (e) {
+      print("Upload error: $e");
+      if (mounted) {
+        widget.scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text("Upload failed: $e"),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Please fill all required fields"),
-          backgroundColor: Colors.red,
-        ),
-      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -313,6 +353,7 @@ class PatientInfoFormState extends State<PatientInfoForm> {
     return Form(
       key: _formKey,
       child: Scrollbar(
+        controller: scrollController,
         child: SingleChildScrollView(
           controller: scrollController,
           padding: const EdgeInsets.all(16),
@@ -440,7 +481,6 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                     labelText: 'Is Scan Complete',
                   ),
                   items: isScanCompleteDropdownItems,
-                  hint: Text("Is Scan Complete"),
                   onChanged: (value) {
                     setState(() {
                       _isScanComplete = value.toString();
@@ -451,8 +491,8 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton(
-                      style: ButtonStyle(
-                        backgroundColor: MaterialStateProperty.all(Colors.red),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
                       ),
                       child: const Text(
                         'Cancel',
@@ -463,10 +503,10 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                           _formKey.currentState?.reset();
                           patientNameTextField.clear();
                         });
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        widget.scaffoldMessengerKey.currentState?.showSnackBar(
                           SnackBar(
                             content: Text(
-                              "Form reset sucessfully",
+                              "Form reset successful",
                               style: TextStyle(color: Colors.black),
                             ),
                             backgroundColor: Colors.white,
@@ -475,28 +515,26 @@ class PatientInfoFormState extends State<PatientInfoForm> {
                       },
                     ),
                     ElevatedButton(
-                      style: ButtonStyle(
+                      style: ElevatedButton.styleFrom(
                         backgroundColor:
-                            MaterialStateProperty.resolveWith<Color>((
-                              Set<MaterialState> states,
-                            ) {
-                              if (_patientRegistrationId != 0 &&
-                                  _serviceType.isNotEmpty &&
-                                  _pictureSource.isNotEmpty &&
-                                  _pictureType.isNotEmpty &&
-                                  _isScanComplete.isNotEmpty) {
-                                return Colors.blue;
-                              }
-                              return Colors.grey.shade300;
-                            }),
+                            _patientRegistrationId != 0 &&
+                                _serviceType.isNotEmpty &&
+                                _pictureSource.isNotEmpty &&
+                                _pictureType.isNotEmpty &&
+                                _isScanComplete.isNotEmpty
+                            ? Colors.blue
+                            : Colors.grey.shade300,
                       ),
-                      child: const Text(
-                        'Submit',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      onPressed: () {
-                        _showConfirmationDialog(context);
-                      },
+                      child: _isLoading
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            )
+                          : const Text(
+                              'Submit',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                      onPressed: _isLoading ? null : _showConfirmationDialog,
                     ),
                   ],
                 ),

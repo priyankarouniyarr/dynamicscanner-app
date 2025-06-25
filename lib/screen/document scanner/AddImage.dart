@@ -1,12 +1,13 @@
 import 'dart:io';
+import 'dart:ui';
 import 'dart:developer';
 import '../../alert.dart';
 import 'package:flutter/material.dart';
-import 'dart:ui'; // For ImageFilter.blur
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:dynamicemrapp/screen/document%20scanner/viewDocuments.dart';
+import 'package:dynamicemrapp/screen/document%20scanner/DisplayPicture.dart';
 import 'package:dynamicemrapp/screen/document%20scanner/patientInformation.dart';
 
 class AddImage extends StatefulWidget {
@@ -16,7 +17,7 @@ class AddImage extends StatefulWidget {
 }
 
 class _AddImageState extends State<AddImage> {
-  late File _image;
+  List<File> _images = [];
   ImagePicker imagePicker = ImagePicker();
   String tempPath = "";
   String appDocPath = "";
@@ -61,7 +62,6 @@ class _AddImageState extends State<AddImage> {
         String fileName = imagePath.path.split('/').last;
         log("File Name: $fileName");
         String targetPath = '$appDocPath/$fileName';
-        log("Target Path: $targetPath");
 
         var result = await FlutterImageCompress.compressAndGetFile(
           imagePath.absolute.path,
@@ -73,8 +73,16 @@ class _AddImageState extends State<AddImage> {
 
         if (result != null && mounted) {
           setState(() {
-            _image = File(result.path);
+            _images.add(File(result.path)); // Add to images list
           });
+          // Navigate to DisplayPicture with the list of images
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  DisplayPicture(images: _images, context: context),
+            ),
+          );
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -132,7 +140,6 @@ class _AddImageState extends State<AddImage> {
       String fileName = imagePath.path.split('/').last;
       log("File Name: $fileName");
       String targetPath = '$appDocPath/$fileName';
-      log("Target Path: $targetPath");
 
       var result = await FlutterImageCompress.compressAndGetFile(
         imagePath.absolute.path,
@@ -144,8 +151,16 @@ class _AddImageState extends State<AddImage> {
 
       if (result != null && mounted) {
         setState(() {
-          _image = File(result.path);
+          _images.add(File(result.path)); // Add to images list
         });
+        // Navigate to DisplayPicture with the list of images
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                DisplayPicture(images: _images, context: context),
+          ),
+        );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -196,10 +211,7 @@ class _AddImageState extends State<AddImage> {
                     icon: Icons.camera_alt_outlined,
                     label: "Take Picture",
                     isInteracted: _isCameraCardInteracted,
-                    onTap: () async {
-                      await _imageFromCamera();
-                      if (mounted) setState(() {});
-                    },
+                    onTap: _imageFromCamera,
                     onTapDown: () =>
                         setState(() => _isCameraCardInteracted = true),
                     onTapUp: () =>
@@ -213,10 +225,7 @@ class _AddImageState extends State<AddImage> {
                     icon: Icons.browse_gallery_sharp,
                     label: "Pick From Gallery",
                     isInteracted: _isGalleryCardInteracted,
-                    onTap: () async {
-                      await _imageFromGallery();
-                      if (mounted) setState(() {});
-                    },
+                    onTap: _imageFromGallery,
                     onTapDown: () =>
                         setState(() => _isGalleryCardInteracted = true),
                     onTapUp: () =>
