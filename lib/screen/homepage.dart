@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:dynamicemrapp/FaBarcodeScanner.dart';
 import 'package:dynamicemrapp/screen/sign%20in/signIn.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dynamicemrapp/screen/document%20scanner/AddImage.dart';
@@ -155,12 +156,10 @@ class _MyHomePageState extends State<MyHomePage> {
                       colors: Colors.blue,
                       color: Colors.grey.shade200,
                       onTap: () {
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //     builder: (_) => FaBarcodeScanner(),
-                        //   ),
-                        // );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => FaBarcodeScanner()),
+                        );
                       },
                     ),
                     // _ActionButton(
