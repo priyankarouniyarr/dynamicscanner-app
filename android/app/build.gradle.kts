@@ -5,6 +5,7 @@ plugins {
 }
 
 android {
+    
     namespace = "com.paailatechnologies.dynamicemrapp"
     compileSdk = 35
     ndkVersion = "27.0.12077973"
