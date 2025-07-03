@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class FaBarcodeScanner extends StatefulWidget {
   const FaBarcodeScanner({Key? key}) : super(key: key);
@@ -9,8 +12,9 @@ class FaBarcodeScanner extends StatefulWidget {
 }
 
 class _FaBarcodeScannerState extends State<FaBarcodeScanner> {
-  String _scanBarcode = 'No scan result yet';
   bool _isScanning = false;
+  bool _showWebView = false;
+  String _webViewUrl = '';
   final MobileScannerController _scannerController = MobileScannerController();
 
   @override
@@ -22,13 +26,31 @@ class _FaBarcodeScannerState extends State<FaBarcodeScanner> {
   void _startBarcodeScan() {
     setState(() {
       _isScanning = true;
-      _scanBarcode = 'Scanning...';
+      _showWebView = false;
+      // _scanBarcode = 'Scanning...';
     });
   }
 
   void _stopBarcodeScan() {
     setState(() {
       _isScanning = false;
+    });
+  }
+
+  // Function to convert string to Base64
+  String _toBase64(String input) {
+    return base64Encode(utf8.encode(input));
+  }
+
+  void _openWebView(String barcode) {
+    final encodedBarcode = _toBase64(barcode);
+    log("Encoded Barcode: $encodedBarcode");
+    setState(() {
+      // _scanBarcode = encodedBarcode;
+      _showWebView = true;
+      _webViewUrl =
+          'http://45.117.153.90:5001/FaCardFrontEnd/FaCardDetails?cardBarcode=$encodedBarcode';
+      log(_webViewUrl);
     });
   }
 
@@ -57,23 +79,34 @@ class _FaBarcodeScannerState extends State<FaBarcodeScanner> {
           leading: BackButton(
             color: Colors.white,
             onPressed: () {
+              log(_showWebView.toString());
+
               Navigator.pop(context);
             },
           ),
         ),
-        body: _isScanning
+        body: _showWebView
+            ? WebViewWidget(
+                controller: WebViewController()
+                  ..setJavaScriptMode(JavaScriptMode.unrestricted)
+                  ..loadRequest(Uri.parse(_webViewUrl)),
+              )
+            : _isScanning
             ? Stack(
                 children: [
                   MobileScanner(
                     controller: _scannerController,
                     onDetect: (capture) {
+                      log(
+                        "Barcode detected: ${capture.barcodes.first.rawValue}",
+                      );
                       final List<Barcode> barcodes = capture.barcodes;
+                      log("Barcodes: $barcodes");
                       if (barcodes.isNotEmpty) {
-                        setState(() {
-                          _scanBarcode =
-                              barcodes.first.rawValue ?? 'No value detected';
-                          _isScanning = false;
-                        });
+                        final rawValue =
+                            barcodes.first.rawValue ?? 'No value detected';
+                        log("Raw Value: $rawValue");
+                        _openWebView(rawValue);
                       }
                     },
                   ),
@@ -119,10 +152,6 @@ class _FaBarcodeScannerState extends State<FaBarcodeScanner> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Text(
-                      'Scan result: $_scanBarcode\n',
-                      style: const TextStyle(fontSize: 20, color: Colors.white),
-                    ),
                   ],
                 ),
               ),

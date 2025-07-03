@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:dynamicemrapp/FaBarcodeScanner.dart';
 import 'package:dynamicemrapp/screen/sign%20in/signIn.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dynamicemrapp/screen/barcode/FaBarcodeScanner.dart';
 import 'package:dynamicemrapp/screen/document%20scanner/AddImage.dart';
 
 class MyHomePage extends StatefulWidget {

@@ -47,7 +47,7 @@ class ApiClient {
       );
       // print(response.statusCode);
       if (response.statusCode == 200) {
-        //   print(json.decode(response.body));
+        print(json.decode(response.body));
         LoginResponse loginResponse = LoginResponse.fromJson(
           json.decode(response.body),
         );
