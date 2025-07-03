@@ -419,7 +419,7 @@ class _DisplayPictureState extends State<DisplayPicture> {
                             ),
                           ),
                           onPressed: () {
-                            Navigator.push(
+                            Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => PatientInfo(),

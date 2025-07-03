@@ -45,6 +45,7 @@ class _MyHomePageState extends State<MyHomePage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           backgroundColor: Colors.transparent,
           title: Center(child: const Text('')),
           actions: <Widget>[

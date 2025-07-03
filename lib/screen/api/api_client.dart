@@ -17,8 +17,6 @@ class ApiClient {
     print(url);
     var response = await http.get(url);
 
-    // print(response.body);
-
     if (response.statusCode == 200) {
       Iterable l = json.decode(response.body);
       List<Branch> branches = List<Branch>.from(
@@ -118,8 +116,8 @@ class ApiClient {
           "Content-Type": "application/json",
         },
       );
-      print("Response Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
+      // print("Response Status Code: ${response.statusCode}");
+      // print("Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
         return true;

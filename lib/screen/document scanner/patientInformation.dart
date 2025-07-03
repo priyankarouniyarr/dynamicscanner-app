@@ -38,6 +38,7 @@ class PatientInfo extends StatelessWidget {
         child: Scaffold(
           backgroundColor: Colors.transparent,
           appBar: AppBar(
+            automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent,
             title: Text(
               appTitle,
@@ -48,7 +49,6 @@ class PatientInfo extends StatelessWidget {
               ),
             ),
             centerTitle: true,
-            leading: BackButton(color: Colors.white),
           ),
           body: PatientInfoForm(scaffoldMessengerKey: _scaffoldMessengerKey),
         ),
@@ -315,9 +315,10 @@ class PatientInfoFormState extends State<PatientInfoForm> {
           await Future.delayed(Duration(seconds: 2));
 
           if (mounted) {
-            Navigator.push(
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => MyHomePage()),
+              (route) => false,
             );
           }
         }
